@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planilha de Orçamento</title>
+
+    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- CABEÇALHO -->
+        <div class="header">
+            <p>EMPRESA: XXXXXXXXX XX XXXXXXXXX</p>
+            <p>Endereço: Rua; Maria Fernandes de Moura, 120, Tinga</p>
+            <p>CNPJ: XX.XXX.XXX/XXXX-XX</p>
+            <p>Fone: 012 991485333</p>
+
+        </div>
+
+        <button class="btn-limpar" onclick="limparTabela()">Novo Orçamento</button>
+
+
+        <!-- TABELA -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantidade</th>
+                    <th>Descrição</th>
+                    <th>Valor Unitário (R$)</th>
+                    <th>Valor Total (R$)</th>
+                </tr>
+            </thead>
+
+            <tbody id="corpoTabela">
+                <!-- Linhas dinâmicas -->
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <td>Total</td>
+                    <td colspan="3"></td>
+                    <td><span id="totalGeral">R$ 0.00</span></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- BOTÃO PDF -->
+        <button onclick="baixarPDF()">📄 Baixar Orçamento em PDF</button>
+
+        <!-- RODAPÉ TELA -->
+        <div class="rodape">
+            <span id="dataCarimboTela"></span>
+        </div>
+
+    </div>
+
+    <script src="js/scripts.js"></script>
+
+</body>
+
+</html>
