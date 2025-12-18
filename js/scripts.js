@@ -179,10 +179,10 @@ async function baixarPDF() {
 
     // === CABEÇALHO ===
     doc.setFontSize(11);
-    doc.text("Empresa: litoralnortesoftware.com.br", 15, 15);
-    doc.text("Endereço: Rua Maria Fernandes de Moura, 120, Tinga", 15, 21);
-    doc.text("CNPJ: XX.ZZZ.XXX/ZZZZ-XX", 15, 27);
-    doc.text("Fone: 012 991485333", 15, 33);
+    doc.text("Empresa: litoralnortesoftware.com.br", 45, 15);
+    doc.text("Endereço: Rua Maria Fernandes de Moura, 120, Tinga", 45, 21);
+    doc.text("CNPJ: XX.ZZZ.XXX/ZZZZ-XX", 45, 27);
+    doc.text("Fone: 012 991485333", 45, 33);
 
     // === TABELA ===
     const linhas = [];
@@ -227,7 +227,6 @@ async function baixarPDF() {
     // === DOWNLOAD ===
     doc.save(`orcamento-${dataArquivo}.pdf`);
 }
-
 
 
 document.addEventListener("keydown", function (e) {
