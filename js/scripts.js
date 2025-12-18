@@ -157,7 +157,6 @@ function carregarImagemBase64(src) {
     });
 }
 
-
 /* ===== PDF ===== */
 async function baixarPDF() {
     const { jsPDF } = window.jspdf;
@@ -169,10 +168,21 @@ async function baixarPDF() {
 
     // === LOGO ===
     try {
-        const logoBase64 = await carregarImagemBase64("img/icon-512.png");
+        const imgLogo = document.querySelector(".logo");
 
-        // Logo (x, y, largura, altura)
-        doc.addImage(logoBase64, "PNG", 15, 10, 25, 25);
+        if (imgLogo) {
+            const canvas = document.createElement("canvas");
+            canvas.width = imgLogo.naturalWidth;
+            canvas.height = imgLogo.naturalHeight;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(imgLogo, 0, 0);
+
+            const imgData = canvas.toDataURL("image/png");
+
+            doc.addImage(imgData, "PNG", 15, 10, 25, 25);
+        }
+
     } catch (e) {
         console.warn("Logo não carregada no PDF", e);
     }
@@ -227,7 +237,6 @@ async function baixarPDF() {
     // === DOWNLOAD ===
     doc.save(`orcamento-${dataArquivo}.pdf`);
 }
-
 
 document.addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
