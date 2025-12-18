@@ -140,24 +140,51 @@ function gerarDataTela() {
         `Orçamento emitido em ${hoje}`;
 }
 
+function carregarImagemBase64(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = function () {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+
 /* ===== PDF ===== */
-function baixarPDF() {
+async function baixarPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF("p", "mm", "a4");
 
     const hoje = new Date();
     const dataCarimbo = hoje.toLocaleDateString("pt-BR");
     const dataArquivo = dataCarimbo.split("/").reverse().join("-");
- 
 
-    // Cabeçalho
+    // === LOGO ===
+    try {
+        const logoBase64 = await carregarImagemBase64("img/icon-512.png");
+
+        // Logo (x, y, largura, altura)
+        doc.addImage(logoBase64, "PNG", 15, 10, 25, 25);
+    } catch (e) {
+        console.warn("Logo não carregada no PDF", e);
+    }
+
+    // === CABEÇALHO ===
     doc.setFontSize(11);
     doc.text("Empresa: litoralnortesoftware.com.br", 15, 15);
     doc.text("Endereço: Rua Maria Fernandes de Moura, 120, Tinga", 15, 21);
     doc.text("CNPJ: XX.ZZZ.XXX/ZZZZ-XX", 15, 27);
     doc.text("Fone: 012 991485333", 15, 33);
 
-    // Dados da tabela
+    // === TABELA ===
     const linhas = [];
     document.querySelectorAll("#corpoTabela tr").forEach(tr => {
         const qtd = tr.children[1].querySelector("input").value;
@@ -177,7 +204,7 @@ function baixarPDF() {
     });
 
     doc.autoTable({
-        startY: 40,
+        startY: 45,
         head: [["Item", "Quantidade", "Descrição", "Valor Unitário (R$)", "Valor Total (R$)"]],
         body: linhas,
         styles: { fontSize: 9 },
@@ -188,12 +215,20 @@ function baixarPDF() {
         }
     });
 
+    // === TOTAL ===
     const totalGeral = document.getElementById("totalGeral").textContent;
     doc.setFontSize(11);
-    doc.text(`Total Geral: ${totalGeral}`, 15, doc.lastAutoTable.finalY + 8);
+    doc.text(
+        `Total Geral: ${totalGeral}`,
+        15,
+        doc.lastAutoTable.finalY + 10
+    );
 
+    // === DOWNLOAD ===
     doc.save(`orcamento-${dataArquivo}.pdf`);
 }
+
+
 
 document.addEventListener("keydown", function (e) {
     if (e.key !== "Enter") return;
