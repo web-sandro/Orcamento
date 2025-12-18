@@ -152,10 +152,10 @@ function baixarPDF() {
 
     // Cabeçalho
     doc.setFontSize(11);
-    doc.text("Empresa: NEUSA APARECIDA DOS SANTOS-ME", 15, 15);
-    doc.text("Endereço: Rua Benedita M. Sousa, 136, Tinga", 15, 21);
-    doc.text("CNPJ: 55.636.252/0001-01", 15, 27);
-    doc.text("Fone: 012 3883-6981", 15, 33);
+    doc.text("Empresa: litoralnortesoftware.com.br", 15, 15);
+    doc.text("Endereço: Rua Maria Fernandes de Moura, 120, Tinga", 15, 21);
+    doc.text("CNPJ: XX.ZZZ.XXX/ZZZZ-XX", 15, 27);
+    doc.text("Fone: 012 991485333", 15, 33);
 
     // Dados da tabela
     const linhas = [];
