@@ -1,199 +1,240 @@
- function limparTabela() {
-            const tbody = document.getElementById("corpoTabela");
+function limparTabela() {
+    const tbody = document.getElementById("corpoTabela");
 
-            // Remove todas as linhas
-            tbody.innerHTML = "";
+    // Remove todas as linhas
+    tbody.innerHTML = "";
 
-            // Reseta contador
-            contadorItens = 1;
+    // Reseta contador
+    contadorItens = 1;
 
-            // Zera total
-            document.getElementById("totalGeral").textContent = "R$ 0.00";
+    // Zera total
+    document.getElementById("totalGeral").textContent = "R$ 0.00";
 
-            // Cria novamente as 2 linhas iniciais
-            criarLinha();
-            criarLinha();
+    // Cria novamente as 2 linhas iniciais
+    criarLinha();
+    criarLinha();
 
-            // Coloca o foco no primeiro campo
-            setTimeout(() => {
-                const primeiroInput = tbody.querySelector("input");
-                if (primeiroInput) primeiroInput.focus();
-            }, 0);
+    // Coloca o foco no primeiro campo
+    setTimeout(() => {
+        const primeiroInput = tbody.querySelector("input");
+        if (primeiroInput) primeiroInput.focus();
+    }, 0);
+}
+
+/* ===== PWA ===== */
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js");
+}
+
+/* ===== MOEDA ===== */
+function formatarMoeda(valor) {
+    return `R$ ${Number(valor).toFixed(2)}`;
+}
+
+/* ===== TABELA DINÂMICA ===== */
+let contadorItens = 1;
+
+// Aceita SOMENTE números inteiros
+function somenteNumero(input) {
+    input.value = input.value.replace(/\D/g, "");
+}
+
+// Aceita SOMENTE texto (remove números)
+function somenteTexto(input) {
+    input.value = input.value.replace(/[0-9]/g, "");
+}
+
+// Aceita números decimais (1 ponto apenas)
+function somenteDecimal(input) {
+    input.value = input.value
+        .replace(/[^0-9.]/g, "")   // remove letras
+        .replace(/(\..*)\./g, "$1"); // impede dois pontos
+}
+
+
+function criarLinha() {
+    const tbody = document.getElementById("corpoTabela");
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+  <td>${contadorItens}</td>
+
+  <!-- SOMENTE NÚMEROS INTEIROS -->
+  <td>
+    <input type="text"
+           inputmode="numeric"
+           oninput="somenteNumero(this); linhaEditada(this)">
+  </td>
+
+  <!-- SOMENTE TEXTO -->
+  <td>
+    <input type="text"
+           oninput="somenteTexto(this); linhaEditada(this)">
+  </td>
+
+  <!-- SOMENTE NÚMEROS DECIMAIS -->
+  <td>
+    <input type="text"
+           inputmode="decimal"
+           placeholder="0.00"
+           oninput="somenteDecimal(this); linhaEditada(this)">
+  </td>
+
+  <td class="totalLinha">R$ 0.00</td>
+`;
+
+
+    contadorItens++;
+    tbody.appendChild(tr);
+}
+
+function linhaEditada(input) {
+    const tr = input.closest("tr");
+
+    const qtd = parseFloat(
+        tr.children[1].querySelector("input").value.replace(",", ".")
+    ) || 0;
+
+    const valorUnit = parseFloat(
+        tr.children[3].querySelector("input").value.replace(",", ".")
+    ) || 0;
+
+    const total = qtd * valorUnit;
+    tr.querySelector(".totalLinha").textContent = formatarMoeda(total);
+
+    calcularTotalGeral();
+    verificarNovaLinha();
+}
+
+function verificarNovaLinha() {
+    const linhas = document.querySelectorAll("#corpoTabela tr");
+    const ultima = linhas[linhas.length - 1];
+    const inputs = ultima.querySelectorAll("input");
+
+    let preenchido = false;
+    inputs.forEach(i => {
+        if (i.value.trim() !== "") preenchido = true;
+    });
+
+    if (preenchido) criarLinha();
+}
+
+function calcularTotalGeral() {
+    let total = 0;
+    document.querySelectorAll(".totalLinha").forEach(td => {
+        total += parseFloat(td.textContent.replace("R$", ""));
+    });
+    document.getElementById("totalGeral").textContent = formatarMoeda(total);
+}
+
+window.onload = () => {
+    criarLinha();
+    criarLinha();
+    gerarDataTela();
+};
+
+/* ===== DATA NA TELA ===== */
+function gerarDataTela() {
+    const hoje = new Date().toLocaleDateString("pt-BR");
+    document.getElementById("dataCarimboTela").textContent =
+        `Orçamento emitido em ${hoje}`;
+}
+
+/* ===== PDF ===== */
+function baixarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "mm", "a4");
+
+    const hoje = new Date();
+    const dataCarimbo = hoje.toLocaleDateString("pt-BR");
+    const dataArquivo = dataCarimbo.split("/").reverse().join("-");
+ 
+
+    // Cabeçalho
+    doc.setFontSize(11);
+    doc.text("Empresa: NEUSA APARECIDA DOS SANTOS-ME", 15, 15);
+    doc.text("Endereço: Rua Benedita M. Sousa, 136, Tinga", 15, 21);
+    doc.text("CNPJ: 55.636.252/0001-01", 15, 27);
+    doc.text("Fone: 012 3883-6981", 15, 33);
+
+    // Dados da tabela
+    const linhas = [];
+    document.querySelectorAll("#corpoTabela tr").forEach(tr => {
+        const qtd = tr.children[1].querySelector("input").value;
+        const desc = tr.children[2].querySelector("input").value;
+        const unit = tr.children[3].querySelector("input").value;
+        const total = tr.children[4].textContent;
+
+        if (qtd || desc || unit) {
+            linhas.push([
+                tr.children[0].textContent,
+                qtd,
+                desc,
+                formatarMoeda(unit || 0),
+                total
+            ]);
         }
+    });
 
-        /* ===== MOEDA ===== */
-        function formatarMoeda(valor) {
-            return `R$ ${Number(valor).toFixed(2)}`;
+    doc.autoTable({
+        startY: 40,
+        head: [["Item", "Quantidade", "Descrição", "Valor Unitário (R$)", "Valor Total (R$)"]],
+        body: linhas,
+        styles: { fontSize: 9 },
+        didDrawPage: function () {
+            const h = doc.internal.pageSize.height;
+            doc.setFontSize(9);
+            doc.text(`Orçamento emitido em ${dataCarimbo}`, 15, h - 20);
         }
+    });
 
-        /* ===== TABELA DINÂMICA ===== */
-        let contadorItens = 1;
+    const totalGeral = document.getElementById("totalGeral").textContent;
+    doc.setFontSize(11);
+    doc.text(`Total Geral: ${totalGeral}`, 15, doc.lastAutoTable.finalY + 8);
 
-        function criarLinha() {
-            const tbody = document.getElementById("corpoTabela");
-            const tr = document.createElement("tr");
+    doc.save(`orcamento-${dataArquivo}.pdf`);
+}
 
-            tr.innerHTML = `
-        <td>${contadorItens}</td>
-        <td><input type="number" min="0" oninput="linhaEditada(this)"></td>
-        <td><input type="text" oninput="linhaEditada(this)"></td>
-        <td>
-          <input type="number" min="0" step="0.01" placeholder="0.00"
-                 oninput="linhaEditada(this)">
-        </td>
-        <td class="totalLinha">R$ 0.00</td>
-      `;
+document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
 
-            contadorItens++;
-            tbody.appendChild(tr);
-        }
+    const ativo = document.activeElement;
 
-        function linhaEditada(input) {
-            const tr = input.closest("tr");
+    // Só age se estiver em um input da tabela
+    if (!ativo || ativo.tagName !== "INPUT") return;
 
-            const qtd = parseFloat(
-                tr.children[1].querySelector("input").value.replace(",", ".")
-            ) || 0;
+    e.preventDefault(); // impede submit / quebra de linha
 
-            const valorUnit = parseFloat(
-                tr.children[3].querySelector("input").value.replace(",", ".")
-            ) || 0;
+    const inputs = Array.from(
+        document.querySelectorAll("#corpoTabela input")
+    );
 
-            const total = qtd * valorUnit;
-            tr.querySelector(".totalLinha").textContent = formatarMoeda(total);
+    const indexAtual = inputs.indexOf(ativo);
 
-            calcularTotalGeral();
-            verificarNovaLinha();
-        }
+    if (indexAtual === -1) return;
 
-        function verificarNovaLinha() {
-            const linhas = document.querySelectorAll("#corpoTabela tr");
-            const ultima = linhas[linhas.length - 1];
-            const inputs = ultima.querySelectorAll("input");
+    // Se estiver no último input, cria nova linha
+    if (indexAtual === inputs.length - 1) {
+        criarLinha();
+    }
 
-            let preenchido = false;
-            inputs.forEach(i => {
-                if (i.value.trim() !== "") preenchido = true;
-            });
+    // Move foco para o próximo input
+    setTimeout(() => {
+        inputs[indexAtual + 1]?.focus();
+    }, 0);
+});
 
-            if (preenchido) criarLinha();
-        }
+function focarPrimeiroCampo() {
+    const primeiroInput = document.querySelector("#corpoTabela input");
+    if (primeiroInput) {
+        primeiroInput.focus();
+        primeiroInput.select(); // opcional: seleciona o conteúdo
+    }
+}
 
-        function calcularTotalGeral() {
-            let total = 0;
-            document.querySelectorAll(".totalLinha").forEach(td => {
-                total += parseFloat(td.textContent.replace("R$", ""));
-            });
-            document.getElementById("totalGeral").textContent = formatarMoeda(total);
-        }
-
-        window.onload = () => {
-            criarLinha();
-            criarLinha();
-            gerarDataTela();
-        };
-
-        /* ===== DATA NA TELA ===== */
-        function gerarDataTela() {
-            const hoje = new Date().toLocaleDateString("pt-BR");
-            document.getElementById("dataCarimboTela").textContent =
-                `Orçamento emitido em ${hoje}`;
-        }
-
-        /* ===== PDF ===== */
-        function baixarPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF("p", "mm", "a4");
-
-            const hoje = new Date();
-            const dataCarimbo = hoje.toLocaleDateString("pt-BR");
-            const dataArquivo = dataCarimbo.split("/").reverse().join("-");
-
-            // Cabeçalho
-            doc.setFontSize(11);
-            doc.text("Empresa: Consórcio Sanear Litoral Norte", 15, 15);
-            doc.text("Endereço: Av Pedro Reginaldo da Costa 455 – Balneários dos Golfinhos", 15, 21);
-            doc.text("CNPJ: 40.138.733/0001-01", 15, 27);
-            doc.text("A/C Camila Leone – Administradora", 15, 33);
-
-            // Dados da tabela
-            const linhas = [];
-            document.querySelectorAll("#corpoTabela tr").forEach(tr => {
-                const qtd = tr.children[1].querySelector("input").value;
-                const desc = tr.children[2].querySelector("input").value;
-                const unit = tr.children[3].querySelector("input").value;
-                const total = tr.children[4].textContent;
-
-                if (qtd || desc || unit) {
-                    linhas.push([
-                        tr.children[0].textContent,
-                        qtd,
-                        desc,
-                        formatarMoeda(unit || 0),
-                        total
-                    ]);
-                }
-            });
-
-            doc.autoTable({
-                startY: 40,
-                head: [["Item", "Quantidade", "Descrição", "Valor Unitário (R$)", "Valor Total (R$)"]],
-                body: linhas,
-                styles: { fontSize: 9 },
-                didDrawPage: function () {
-                    const h = doc.internal.pageSize.height;
-                    doc.setFontSize(9);
-                    doc.text(`Orçamento emitido em ${dataCarimbo}`, 15, h - 20);
-                }
-            });
-
-            const totalGeral = document.getElementById("totalGeral").textContent;
-            doc.setFontSize(11);
-            doc.text(`Total Geral: ${totalGeral}`, 15, doc.lastAutoTable.finalY + 8);
-
-            doc.save(`orcamento-${dataArquivo}.pdf`);
-        }
-
-        document.addEventListener("keydown", function (e) {
-            if (e.key !== "Enter") return;
-
-            const ativo = document.activeElement;
-
-            // Só age se estiver em um input da tabela
-            if (!ativo || ativo.tagName !== "INPUT") return;
-
-            e.preventDefault(); // impede submit / quebra de linha
-
-            const inputs = Array.from(
-                document.querySelectorAll("#corpoTabela input")
-            );
-
-            const indexAtual = inputs.indexOf(ativo);
-
-            if (indexAtual === -1) return;
-
-            // Se estiver no último input, cria nova linha
-            if (indexAtual === inputs.length - 1) {
-                criarLinha();
-            }
-
-            // Move foco para o próximo input
-            setTimeout(() => {
-                inputs[indexAtual + 1]?.focus();
-            }, 0);
-        });
-
-        function focarPrimeiroCampo() {
-            const primeiroInput = document.querySelector("#corpoTabela input");
-            if (primeiroInput) {
-                primeiroInput.focus();
-                primeiroInput.select(); // opcional: seleciona o conteúdo
-            }
-        }
-
-        window.onload = () => {
-            criarLinha();
-            criarLinha();
-            gerarDataTela();
-            focarPrimeiroCampo(); // Foca o primeiro campo ao carregar a página
-        };
+window.onload = () => {
+    criarLinha();
+    criarLinha();
+    gerarDataTela();
+    focarPrimeiroCampo(); // Foca o primeiro campo ao carregar a página
+};
