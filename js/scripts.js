@@ -180,8 +180,37 @@ async function baixarPDF() {
 
     // === LOGO ===
     try {
+<<<<<<< HEAD
         const logo = await carregarImagemBase64("img/icon-512.png");
         doc.addImage(logo, "PNG", 15, 10, 25, 25);
+=======
+        const imgLogo = document.querySelector(".logo");
+
+        if (imgLogo) {
+            const canvas = document.createElement("canvas");
+            canvas.width = imgLogo.naturalWidth;
+            canvas.height = imgLogo.naturalHeight;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(imgLogo, 0, 0);
+
+            const imgData = canvas.toDataURL("image/png");
+            doc.addImage(imgData, "PNG", 15, 10, 25, 25);
+        }
+>>>>>>> 782ffef78dd230bc1ae1f9623de57e5146ff0916
+
+        // === LOGO VIA FETCH (SEM CANVAS) ===
+        // const response = await fetch("img/icon-512.png");
+        // const blob = await response.blob();
+
+        // const reader = new FileReader();
+        // const imgData = await new Promise(resolve => {
+        //     reader.onloadend = () => resolve(reader.result);
+        //     reader.readAsDataURL(blob);
+        // });
+
+        // doc.addImage(imgData, "PNG", 15, 10, 25, 25);
+
 
     } catch (e) {
         console.warn("Logo não carregada no PDF", e);
