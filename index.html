@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,6 +17,27 @@
         navigator.serviceWorker.register("/sw.js");
     }
 </script>
+
+    <div id="modalProdutos" class="modal hidden">
+        <div class="modal-content">
+            <h2>📦 Produtos Cadastrados</h2>
+
+            <table class="tabela-produtos">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Valor (R$)</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="listaProdutos"></tbody>
+            </table>
+
+            <button onclick="fecharListaProdutos()">Fechar</button>
+        </div>
+    </div>
+
 
 <body>
 
@@ -37,12 +57,41 @@
 
         <button class="btn-limpar" onclick="limparTabela()">Novo Orçamento</button>
 
+        <!-- BOTÃO CADASTRAR PRODUTO -->
+        <button type="button" onclick="abrirCadastroProduto()">📦 Cadastrar Produto</button>
+
+        <!-- BOTÃO LISTA PRODUTOS -->
+        <button type="button" onclick="abrirListaProdutos()">📋 Produtos Cadastrados</button>
+
+        <!-- MODAL / CADASTRO -->
+        <div id="cadastroProduto" class="modal-produto">
+            <h3>Cadastrar Produto</h3>
+
+            <label>Código</label>
+            <input type="text" id="produtoCodigo">
+
+            <label>Nome</label>
+            <input type="text" id="produtoNome">
+
+            <label>Valor (R$)</label>
+            <input type="text" id="produtoValor" placeholder="0.00">
+
+            <div style="margin-top:10px;">
+                <button type="button" onclick="salvarProduto()">Salvar</button>
+                <button type="button" onclick="fecharCadastroProduto()">Cancelar</button>
+            </div>
+
+            <p id="msgProduto"></p>
+        </div>
+
+
 
         <!-- TABELA -->
         <table>
             <thead>
                 <tr>
                     <th>Item</th>
+                    <th>Código</th>
                     <th>Quantidade</th>
                     <th>Descrição</th>
                     <th>Valor Unitário (R$)</th>
@@ -50,18 +99,17 @@
                 </tr>
             </thead>
 
-            <tbody id="corpoTabela">
-                <!-- Linhas dinâmicas -->
-            </tbody>
+            <tbody id="corpoTabela"></tbody>
 
             <tfoot>
                 <tr>
                     <td>Total</td>
-                    <td colspan="3"></td>
+                    <td colspan="4"></td>
                     <td><span id="totalGeral">R$ 0.00</span></td>
                 </tr>
             </tfoot>
         </table>
+
 
         <!-- BOTÃO PDF -->
         <button onclick="baixarPDF()">📄 Baixar Orçamento em PDF</button>

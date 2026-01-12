@@ -23,7 +23,7 @@ function limparTabela() {
 
 /* ===== PWA ===== */
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js");
+    navigator.serviceWorker.register("sw.js");
 }
 
 /* ===== MOEDA ===== */
@@ -51,38 +51,46 @@ function somenteDecimal(input) {
         .replace(/(\..*)\./g, "$1"); // impede dois pontos
 }
 
-
+/* ======================
+   TABELA DINÂMICA
+====================== */
 function criarLinha() {
     const tbody = document.getElementById("corpoTabela");
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-  <td>${contadorItens}</td>
+        <td>${contadorItens}</td>
 
-  <!-- SOMENTE NÚMEROS INTEIROS -->
-  <td>
-    <input type="text"
-           inputmode="numeric"
-           oninput="somenteNumero(this); linhaEditada(this)">
-  </td>
+        <!-- CÓDIGO -->
+        <td>
+            <input type="text"
+                   oninput="produtoDigitado(this, 'codigo')">
+        </td>
 
-  <!-- SOMENTE TEXTO -->
-  <td>
-    <input type="text"
-           oninput="somenteTexto(this); linhaEditada(this)">
-  </td>
+        <!-- QUANTIDADE -->
+        <td>
+            <input type="text"
+                   inputmode="numeric"
+                   value=""
+                   oninput="somenteNumero(this); linhaEditada(this)">
+        </td>
 
-  <!-- SOMENTE NÚMEROS DECIMAIS -->
-  <td>
-    <input type="text"
-           inputmode="decimal"
-           placeholder="0.00"
-           oninput="somenteDecimal(this); linhaEditada(this)">
-  </td>
+        <!-- DESCRIÇÃO -->
+        <td>
+            <input type="text"
+                   oninput="produtoDigitado(this, 'nome')">
+        </td>
 
-  <td class="totalLinha">R$ 0.00</td>
-`;
+        <!-- VALOR UNITÁRIO -->
+        <td>
+            <input type="text"
+                   inputmode="decimal"
+                   placeholder="0.00"
+                   oninput="somenteDecimal(this); linhaEditada(this)">
+        </td>
 
+        <td class="totalLinha">R$ 0.00</td>
+    `;
 
     contadorItens++;
     tbody.appendChild(tr);
@@ -92,14 +100,14 @@ function linhaEditada(input) {
     const tr = input.closest("tr");
 
     const qtd = parseFloat(
-        tr.children[1].querySelector("input").value.replace(",", ".")
+        tr.children[2].querySelector("input").value.replace(",", ".")
     ) || 0;
 
-    const valorUnit = parseFloat(
-        tr.children[3].querySelector("input").value.replace(",", ".")
+    const unit = parseFloat(
+        tr.children[4].querySelector("input").value.replace(",", ".")
     ) || 0;
 
-    const total = qtd * valorUnit;
+    const total = qtd * unit;
     tr.querySelector(".totalLinha").textContent = formatarMoeda(total);
 
     calcularTotalGeral();
@@ -111,12 +119,9 @@ function verificarNovaLinha() {
     const ultima = linhas[linhas.length - 1];
     const inputs = ultima.querySelectorAll("input");
 
-    let preenchido = false;
-    inputs.forEach(i => {
-        if (i.value.trim() !== "") preenchido = true;
-    });
-
-    if (preenchido) criarLinha();
+    if ([...inputs].some(i => i.value.trim() !== "")) {
+        criarLinha();
+    }
 }
 
 function calcularTotalGeral() {
@@ -131,29 +136,36 @@ window.onload = () => {
     criarLinha();
     criarLinha();
     gerarDataTela();
+    focarPrimeiroCampo();
 };
+
+function verificarNovaLinha() {
+    const linhas = document.querySelectorAll("#corpoTabela tr");
+    const ultima = linhas[linhas.length - 1];
+    const inputs = ultima.querySelectorAll("input");
+
+    if ([...inputs].some(i => i.value.trim() !== "")) {
+        criarLinha();
+    }
+}
 
 /* ===== DATA NA TELA ===== */
 function gerarDataTela() {
-    const hoje = new Date().toLocaleDateString("pt-BR");
     document.getElementById("dataCarimboTela").textContent =
-        `Orçamento emitido em ${hoje}`;
+        `Orçamento emitido em ${new Date().toLocaleDateString("pt-BR")}`;
 }
 
-function carregarImagemBase64(src) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = function () {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL("image/png"));
-        };
-        img.onerror = reject;
-        img.src = src;
+/* ======================
+   LOGO EM ALTA QUALIDADE
+====================== */
+async function carregarImagemBase64(src) {
+    const response = await fetch(src);
+    const blob = await response.blob();
+
+    return await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
     });
 }
 
@@ -168,20 +180,8 @@ async function baixarPDF() {
 
     // === LOGO ===
     try {
-        const imgLogo = document.querySelector(".logo");
-
-        if (imgLogo) {
-            const canvas = document.createElement("canvas");
-            canvas.width = imgLogo.naturalWidth;
-            canvas.height = imgLogo.naturalHeight;
-
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(imgLogo, 0, 0);
-
-            const imgData = canvas.toDataURL("image/png");
-
-            doc.addImage(imgData, "PNG", 15, 10, 25, 25);
-        }
+        const logo = await carregarImagemBase64("img/icon-512.png");
+        doc.addImage(logo, "PNG", 15, 10, 25, 25);
 
     } catch (e) {
         console.warn("Logo não carregada no PDF", e);
@@ -196,88 +196,342 @@ async function baixarPDF() {
 
     // === TABELA ===
     const linhas = [];
-    document.querySelectorAll("#corpoTabela tr").forEach(tr => {
-        const qtd = tr.children[1].querySelector("input").value;
-        const desc = tr.children[2].querySelector("input").value;
-        const unit = tr.children[3].querySelector("input").value;
-        const total = tr.children[4].textContent;
 
-        if (qtd || desc || unit) {
+    document.querySelectorAll("#corpoTabela tr").forEach(tr => {
+        const codigo = tr.children[1].querySelector("input")?.value || "";
+        const qtd = tr.children[2].querySelector("input")?.value || "";
+        const desc = tr.children[3].querySelector("input")?.value || "";
+        const unit = tr.children[4].querySelector("input")?.value || "";
+        const total = tr.children[5]?.textContent || "";
+
+        // só adiciona linhas preenchidas
+        if (codigo || qtd || desc || unit) {
             linhas.push([
-                tr.children[0].textContent,
-                qtd,
-                desc,
-                formatarMoeda(unit || 0),
-                total
+                tr.children[0].textContent, // Item
+                codigo,                     // Código
+                qtd,                        // Quantidade
+                desc,                       // Descrição
+                formatarMoeda(unit || 0),   // Unitário
+                total                       // Total
             ]);
         }
     });
 
+    // ===== TABELA PDF =====
     doc.autoTable({
         startY: 45,
-        head: [["Item", "Quantidade", "Descrição", "Valor Unitário (R$)", "Valor Total (R$)"]],
+        head: [[
+            "Item",
+            "Código",
+            "Qtd",
+            "Descrição",
+            "Unit (R$)",
+            "Total (R$)"
+        ]],
         body: linhas,
         styles: { fontSize: 9 },
-        didDrawPage: function () {
+        headStyles: { fillColor: [31, 79, 216] }, // azul profissional
+         didDrawPage: function () {
             const h = doc.internal.pageSize.height;
             doc.setFontSize(9);
             doc.text(`Orçamento emitido em ${dataCarimbo}`, 15, h - 20);
         }
     });
 
-    // === TOTAL ===
-    const totalGeral = document.getElementById("totalGeral").textContent;
+    // ===== TOTAL GERAL =====
     doc.setFontSize(11);
     doc.text(
-        `Total Geral: ${totalGeral}`,
+        `Total Geral: ${document.getElementById("totalGeral").textContent}`,
         15,
         doc.lastAutoTable.finalY + 10
     );
 
-    // === DOWNLOAD ===
+    // ===== DOWNLOAD =====
     doc.save(`orcamento-${dataArquivo}.pdf`);
 }
 
-document.addEventListener("keydown", function (e) {
-    if (e.key !== "Enter") return;
 
-    const ativo = document.activeElement;
 
-    // Só age se estiver em um input da tabela
-    if (!ativo || ativo.tagName !== "INPUT") return;
 
-    e.preventDefault(); // impede submit / quebra de linha
 
-    const inputs = Array.from(
-        document.querySelectorAll("#corpoTabela input")
-    );
 
-    const indexAtual = inputs.indexOf(ativo);
+/* ======================
+   NAVEGAÇÃO ENTER
+====================== */
+document.addEventListener("keydown", e => {
+        if (e.key !== "Enter") return;
 
-    if (indexAtual === -1) return;
+        const ativo = document.activeElement;
+        if (!ativo || ativo.tagName !== "INPUT") return;
 
-    // Se estiver no último input, cria nova linha
-    if (indexAtual === inputs.length - 1) {
+        e.preventDefault();
+
+        const inputs = [...document.querySelectorAll("#corpoTabela input")];
+        const index = inputs.indexOf(ativo);
+
+        if (index === inputs.length - 1) criarLinha();
+        inputs[index + 1]?.focus();
+    });
+
+    /* ======================
+       FOCO INICIAL
+    ====================== */
+    function focarPrimeiroCampo() {
+        const primeiro = document.querySelector("#corpoTabela input");
+        if (primeiro) {
+            primeiro.focus();
+            primeiro.select();
+        }
+    }
+
+    /* ======================
+       INIT
+    ====================== */
+    window.onload = () => {
         criarLinha();
+        criarLinha();
+        gerarDataTela();
+        focarPrimeiroCampo();
+    };
+
+    /* ======================
+        CADASTRO DE PRODUTOS
+    ====================== */
+    function abrirCadastroProduto() {
+        document.getElementById("cadastroProduto").style.display = "block";
     }
 
-    // Move foco para o próximo input
-    setTimeout(() => {
-        inputs[indexAtual + 1]?.focus();
-    }, 0);
-});
-
-function focarPrimeiroCampo() {
-    const primeiroInput = document.querySelector("#corpoTabela input");
-    if (primeiroInput) {
-        primeiroInput.focus();
-        primeiroInput.select(); // opcional: seleciona o conteúdo
+    /* ======================
+        FECHAR CADASTRO PRODUTO
+    ====================== */
+    function fecharCadastroProduto() {
+        document.getElementById("cadastroProduto").style.display = "none";
+        document.getElementById("msgProduto").textContent = "";
     }
-}
 
-window.onload = () => {
-    criarLinha();
-    criarLinha();
-    gerarDataTela();
-    focarPrimeiroCampo(); // Foca o primeiro campo ao carregar a página
-};
+    /* ======================
+        SALVAR PRODUTO
+    ====================== */
+    function salvarProduto() {
+        const codigo = document.getElementById("produtoCodigo").value.trim();
+        const nome = document.getElementById("produtoNome").value.trim();
+        const valor = document.getElementById("produtoValor").value
+            .replace(",", ".")
+            .trim();
+
+        if (!codigo || !nome || !valor) {
+            alert("Preencha código, nome e valor");
+            return;
+        }
+
+        if (isNaN(valor)) {
+            alert("Valor inválido");
+            return;
+        }
+
+        const produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+
+        // evita código duplicado
+        if (produtos.find(p => p.codigo === codigo)) {
+            alert("Código já cadastrado");
+            return;
+        }
+
+        produtos.push({
+            codigo,
+            nome,
+            valor: parseFloat(valor)
+        });
+
+        localStorage.setItem("produtos", JSON.stringify(produtos));
+
+        document.getElementById("msgProduto").textContent =
+            "Produto salvo com sucesso!";
+
+        document.getElementById("produtoCodigo").value = "";
+        document.getElementById("produtoNome").value = "";
+        document.getElementById("produtoValor").value = "";
+    }
+
+    /* ======================
+        AUTOCOMPLETE PRODUTOS
+    ====================== */
+    function produtoDigitado(input, tipo) {
+        const tr = input.closest("tr");
+
+        const codigoInput = tr.children[1].querySelector("input");
+        const qtdInput = tr.children[2].querySelector("input");
+        const nomeInput = tr.children[3].querySelector("input");
+        const valorInput = tr.children[4].querySelector("input");
+
+        const produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+
+        let produto;
+
+        if (tipo === "codigo") {
+            produto = produtos.find(p => p.codigo === codigoInput.value.trim());
+        }
+
+        if (tipo === "nome") {
+            produto = produtos.find(
+                p => p.nome.toLowerCase() === nomeInput.value.trim().toLowerCase()
+            );
+        }
+
+        if (!produto) return;
+
+        // Autocomplete cruzado
+        codigoInput.value = produto.codigo;
+        nomeInput.value = produto.nome;
+        valorInput.value = produto.valor.toFixed(2);
+
+        // Quantidade automática
+        if (!qtdInput.value) qtdInput.value = 1;
+
+        linhaEditada(qtdInput);
+    }
+
+    /* ======================
+        LISTA DE PRODUTOS
+    ====================== */
+    function abrirCadastroProduto() {
+        document.getElementById("cadastroProduto").style.display = "block";
+    }
+
+    /* ======================
+        FECHAR CADASTRO PRODUTO
+    ====================== */
+    function fecharCadastroProduto() {
+        document.getElementById("cadastroProduto").style.display = "none";
+        document.getElementById("msgProduto").textContent = "";
+    }
+
+    /* ======================
+        SALVAR PRODUTO
+    ====================== */
+    function salvarProduto() {
+        const codigo = document.getElementById("produtoCodigo").value.trim();
+        const nome = document.getElementById("produtoNome").value.trim();
+        const valor = document.getElementById("produtoValor").value
+            .replace(",", ".")
+            .trim();
+
+        if (!codigo || !nome || !valor) {
+            alert("Preencha código, nome e valor");
+            return;
+        }
+
+        if (isNaN(valor)) {
+            alert("Valor inválido");
+            return;
+        }
+
+        const produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+
+        // evita código duplicado
+        if (produtos.find(p => p.codigo === codigo)) {
+            alert("Código já cadastrado");
+            return;
+        }
+
+        produtos.push({
+            codigo,
+            nome,
+            valor: parseFloat(valor)
+        });
+
+        localStorage.setItem("produtos", JSON.stringify(produtos));
+
+        // limpa campos
+        document.getElementById("produtoCodigo").value = "";
+        document.getElementById("produtoNome").value = "";
+        document.getElementById("produtoValor").value = "";
+
+        // FECHA O MODAL
+        fecharCadastroProduto();
+    }
+
+    /* ======================
+        LISTA DE PRODUTOS
+    ====================== */
+    function abrirListaProdutos() {
+        renderizarListaProdutos();
+        document.getElementById("modalProdutos").classList.remove("hidden");
+    }
+
+    /* ======================
+        FECHAR LISTA DE PRODUTOS
+    ====================== */
+    function fecharListaProdutos() {
+        document.getElementById("modalProdutos").classList.add("hidden");
+    }
+
+    /* ======================
+        RENDERIZAR LISTA DE PRODUTOS
+    ====================== */
+    function renderizarListaProdutos() {
+        const tbody = document.getElementById("listaProdutos");
+        tbody.innerHTML = "";
+
+        const produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+
+        if (produtos.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="4">Nenhum produto cadastrado</td>
+            </tr>
+        `;
+            return;
+        }
+
+        produtos.forEach((p, index) => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+            <td>${p.codigo}</td>
+            <td>${p.nome}</td>
+            <td>R$ ${Number(p.valor).toFixed(2)}</td>
+            <td>
+                <button onclick="editarProduto(${index})">✏️</button>
+                <button onclick="excluirProduto(${index})">🗑️</button>
+            </td>
+        `;
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    /* ======================
+        EXCLUIR PRODUTO
+    ====================== */
+    function excluirProduto(index) {
+        if (!confirm("Deseja excluir este produto?")) return;
+
+        const produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+        produtos.splice(index, 1);
+        localStorage.setItem("produtos", JSON.stringify(produtos));
+        renderizarListaProdutos();
+    }
+
+    /* ======================
+        EDITAR PRODUTO
+    ====================== */
+    function editarProduto(index) {
+        const produtos = JSON.parse(localStorage.getItem("produtos")) || [];
+        const produto = produtos[index];
+
+        const novoNome = prompt("Nome do produto:", produto.nome);
+        if (novoNome === null) return;
+
+        const novoValor = prompt("Valor do produto:", produto.valor);
+        if (novoValor === null || isNaN(novoValor)) return;
+
+        produtos[index] = {
+            ...produto,
+            nome: novoNome,
+            valor: Number(novoValor)
+        };
+
+        localStorage.setItem("produtos", JSON.stringify(produtos));
+        renderizarListaProdutos();
+    }
