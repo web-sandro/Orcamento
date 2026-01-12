@@ -178,75 +178,44 @@ async function baixarPDF() {
     const dataCarimbo = hoje.toLocaleDateString("pt-BR");
     const dataArquivo = dataCarimbo.split("/").reverse().join("-");
 
-    // === LOGO ===
+    /* ========= LOGO (SEGURO, SEM CANVAS) ========= */
     try {
-<<<<<<< HEAD
-        const logo = await carregarImagemBase64("img/icon-512.png");
-        doc.addImage(logo, "PNG", 15, 10, 25, 25);
-=======
-        const imgLogo = document.querySelector(".logo");
-
-        if (imgLogo) {
-            const canvas = document.createElement("canvas");
-            canvas.width = imgLogo.naturalWidth;
-            canvas.height = imgLogo.naturalHeight;
-
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(imgLogo, 0, 0);
-
-            const imgData = canvas.toDataURL("image/png");
-            doc.addImage(imgData, "PNG", 15, 10, 25, 25);
-        }
->>>>>>> 782ffef78dd230bc1ae1f9623de57e5146ff0916
-
-        // === LOGO VIA FETCH (SEM CANVAS) ===
-        // const response = await fetch("img/icon-512.png");
-        // const blob = await response.blob();
-
-        // const reader = new FileReader();
-        // const imgData = await new Promise(resolve => {
-        //     reader.onloadend = () => resolve(reader.result);
-        //     reader.readAsDataURL(blob);
-        // });
-
-        // doc.addImage(imgData, "PNG", 15, 10, 25, 25);
-
-
+        const logoBase64 = await carregarImagemBase64("img/icon-512.png");
+        doc.addImage(logoBase64, "PNG", 15, 10, 25, 25);
     } catch (e) {
         console.warn("Logo não carregada no PDF", e);
     }
 
-    // === CABEÇALHO ===
+    /* ========= CABEÇALHO ========= */
     doc.setFontSize(11);
     doc.text("Empresa: litoralnortesoftware.com.br", 45, 15);
     doc.text("Endereço: Rua Maria Fernandes de Moura, 120, Tinga", 45, 21);
     doc.text("CNPJ: XX.ZZZ.XXX/ZZZZ-XX", 45, 27);
     doc.text("Fone: 012 991485333", 45, 33);
 
-    // === TABELA ===
+    /* ========= DADOS DA TABELA ========= */
     const linhas = [];
 
     document.querySelectorAll("#corpoTabela tr").forEach(tr => {
-        const codigo = tr.children[1].querySelector("input")?.value || "";
-        const qtd = tr.children[2].querySelector("input")?.value || "";
-        const desc = tr.children[3].querySelector("input")?.value || "";
-        const unit = tr.children[4].querySelector("input")?.value || "";
-        const total = tr.children[5]?.textContent || "";
+        const codigo = tr.children[1]?.querySelector("input")?.value || "";
+        const qtd    = tr.children[2]?.querySelector("input")?.value || "";
+        const desc   = tr.children[3]?.querySelector("input")?.value || "";
+        const unit   = tr.children[4]?.querySelector("input")?.value || "";
+        const total  = tr.children[5]?.textContent || "";
 
-        // só adiciona linhas preenchidas
         if (codigo || qtd || desc || unit) {
             linhas.push([
-                tr.children[0].textContent, // Item
-                codigo,                     // Código
-                qtd,                        // Quantidade
-                desc,                       // Descrição
-                formatarMoeda(unit || 0),   // Unitário
-                total                       // Total
+                tr.children[0].textContent,   // Item
+                codigo,                       // Código
+                qtd,                          // Quantidade
+                desc,                         // Descrição
+                formatarMoeda(unit || 0),     // Unitário
+                total                         // Total
             ]);
         }
     });
 
-    // ===== TABELA PDF =====
+    /* ========= TABELA NO PDF ========= */
     doc.autoTable({
         startY: 45,
         head: [[
@@ -260,14 +229,14 @@ async function baixarPDF() {
         body: linhas,
         styles: { fontSize: 9 },
         headStyles: { fillColor: [31, 79, 216] }, // azul profissional
-         didDrawPage: function () {
+        didDrawPage: function () {
             const h = doc.internal.pageSize.height;
             doc.setFontSize(9);
-            doc.text(`Orçamento emitido em ${dataCarimbo}`, 15, h - 20);
+            doc.text(`Orçamento emitido em ${dataCarimbo}`, 15, h - 15);
         }
     });
 
-    // ===== TOTAL GERAL =====
+    /* ========= TOTAL GERAL ========= */
     doc.setFontSize(11);
     doc.text(
         `Total Geral: ${document.getElementById("totalGeral").textContent}`,
@@ -275,14 +244,9 @@ async function baixarPDF() {
         doc.lastAutoTable.finalY + 10
     );
 
-    // ===== DOWNLOAD =====
+    /* ========= DOWNLOAD ========= */
     doc.save(`orcamento-${dataArquivo}.pdf`);
 }
-
-
-
-
-
 
 /* ======================
    NAVEGAÇÃO ENTER
