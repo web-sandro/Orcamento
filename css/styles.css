@@ -250,3 +250,74 @@ button:hover {
     padding: 6px;
     text-align: center;
 }
+
+/* ===== RESPONSIVO MOBILE ===== */
+@media (max-width: 768px) {
+
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    padding: 15px;
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  /* Header */
+  .header-logo {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .titulo-orcamento {
+    text-align: left;
+    font-size: 16px;
+  }
+
+  /* Tabela com scroll */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  thead th {
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  tbody td {
+    font-size: 12px;
+    padding: 5px;
+  }
+
+  table input {
+    font-size: 12px;
+    padding: 5px;
+  }
+
+  /* Botões */
+  button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 15px;
+  }
+
+  .modal-produto {
+    width: 90%;
+  }
+
+}
